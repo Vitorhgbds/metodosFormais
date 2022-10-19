@@ -11,7 +11,7 @@ SEQ<T> --> Uma coleção como uma lista. IMUTÁVEL
 method Main()
 {
     var vazia: seq<int> := [];
-    var s := [1, 2, 3, 4, 5];
+    var s:seq<int> := [1, 2, 3, 4, 5];
 
     var itens: array<int>;
     itens := new int[3];
@@ -20,12 +20,14 @@ method Main()
     itens[2] := 3;
 
     assert [1,2] == itens[..2];
-
+    assert [1,2,3,4,5] == s[..];
     assert |s| == 5;
     assert s[0] == 1;
     assert s[1..3] == [2, 3];
     assert s[1..] == [2,3,4,5];
     assert s[..3] == [1,2,3];
+    
+    assert [1,2,2,3,4] == [1,2] + [2,3,4] ;
 
     assert 1 in s;
     assert 0 !in s;

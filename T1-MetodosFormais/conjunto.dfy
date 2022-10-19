@@ -11,7 +11,6 @@ class {:autocontracts} ConjuntoInt
 {
     //Abstração
     ghost var Conteudo: seq<int>;
-    ghost const TamanhoMaximo: nat;
 
     //Implementação
     var itens: array<int>;
@@ -29,20 +28,21 @@ class {:autocontracts} ConjuntoInt
 
     // A ideia é o construtor iniciar o conjunto como array de tamanho 0, já que conjuntos não tem limites,
     // então a cada elemento adicionado teremos que aumentar o tamanho do array.
-    constructor(tm:nat)
-    requires tm > 0
+    constructor()
     ensures Conteudo == [] // Conteúdo é a sequência vazia
+    ensures cauda <= itens.Length
     {
 
-        itens := new int[tm];
+        itens := new int[1];
         cauda := 0;
         // Referenciar o abstrato que apareceu no ensures
         Conteudo := [];
-        TamanhoMaximo := tm;
     }
     // metodo auxiliar que verifica se o elemento já existe dentro do array
     method pertence(e:int) returns (r:bool)
     ensures r <==> e in Conteudo
+    ensures r ==> e in Conteudo
+    ensures !r ==> e !in Conteudo
     {
         var i := 0;
         while i < cauda 
@@ -58,7 +58,6 @@ class {:autocontracts} ConjuntoInt
     } 
     
     method Adicionar(elemento:int) returns (r:bool)
-    requires |Conteudo| < TamanhoMaximo // Conjunto não pode estar cheio
     // se o elemento não estava no conteudo antes da invocação do metodo, então retorna true porque ele adicionou;
     // caso o elemento exista no conteudo antigo, retorna falso
     ensures r <==> elemento !in old(Conteudo)
@@ -91,21 +90,22 @@ class {:autocontracts} ConjuntoInt
 
 
     // Método auxiliar que busca o elemento e devolve o índice. Ou devolve -1 caso não encontrar.
-    method BuscarIndice(x:int) returns (r:int)
-    ensures r < 0 ==> forall i :: 0 <= i <itens.Length ==> itens[i] != x
-    ensures 0 <= r < itens.Length ==> itens[r] == x
+    method BuscarIndice(elemento:int) returns (indice:int)
+    ensures indice < 0 ==> forall i :: 0 <= i < cauda ==> itens[i] != elemento
+    ensures 0 <= indice ==> indice < cauda && itens[indice] == elemento
+    ensures Conteudo == old(Conteudo)
     {
-        r := 0;
-        while r < itens.Length
-        decreases itens.Length - r
-        invariant 0 <= r <= itens.Length
-        invariant forall i :: 0 <= i < r ==> itens[i] != x
+        indice := 0;
+        while indice < cauda
+        decreases cauda - indice
+        invariant 0 <= indice <= cauda
+        invariant forall i :: 0 <= i < indice ==> itens[i] != elemento
         {
-            if itens[r] == x
+            if itens[indice] == elemento
             {
-                return r;
+                return indice;
             }
-            r := r + 1;
+            indice := indice + 1;
         }
         return -1;
 
@@ -114,122 +114,91 @@ class {:autocontracts} ConjuntoInt
     method Tamanho() returns (t:nat)
     requires cauda >= 0
     ensures cauda == |Conteudo|
+    ensures Conteudo == old(Conteudo)
     {
         return cauda;
     }
 
     method EstaVazio() returns (r:bool)
-    ensures r ==> |Conteudo| == 0
-    ensures !r ==> |Conteudo| > 0
+    ensures r <==> |Conteudo| == 0
     {
-        if(cauda==0) {
-            r:= true;
-        } else {
-            r:=false;
-        }         
+        return cauda == 0;        
+    }
+
+    method Remove(e:int) returns (b:bool)
+    requires |Conteudo| > 0
+    ensures b ==> (forall i :: i in old(Conteudo) && i != e ==> i in Conteudo) && |Conteudo| == |old(Conteudo)| - 1
+    ensures !b ==> Conteudo == old(Conteudo)
+    ensures b <==> e in old(Conteudo)
+    ensures e !in Conteudo
+    {
+        var pertence := pertence(e);
+        if(!pertence) {
+            b := false;
+            return;
+        }
+ 
+        var pos := BuscarIndice(e);
+        cauda := cauda - 1;
+        forall(i | pos <= i < cauda)
+        {
+            itens[i] := itens[i+1];
+        }
+        Conteudo := Conteudo[0..pos] + Conteudo[pos+1..];
+        b := true;
     }
 
 
-    method Interseccao(a: ConjuntoInt, b:ConjuntoInt) returns (novoArray:ConjuntoInt)
-    requires a.Valid()
-    requires b.Valid()
-    requires a.itens.Length > 0
-    requires b.itens.Length > 0
-    ensures novoArray.itens.Length >= 0
-    //ensures novoArray.itens[novoArray.cauda] in novoArray.Conteudo ==> novoArray.itens[novoArray.cauda] in a.Conteudo && novoArray.itens[novoArray.cauda] in b.Conteudo
+    /*method Interseccao(outroConjunto:ConjuntoInt) returns (novoConjunto:ConjuntoInt)
+    requires outroConjunto.Valid()
+    //ensures forall i :: 0 <= i < novoConjunto.cauda ==> novoConjunto.itens[i] in Conteudo && novoConjunto.itens[i] in outroConjunto.Conteudo
+    //ensures Conteudo == old(Conteudo)
+    //ensures outroConjunto.Conteudo == old(outroS'Conjunto.Conteudo)
+    //ensures novoConjunto.Valid()
     {
-        var tmA:int := a.Tamanho();
-        var tm:int := b.Tamanho();
-        if(tmA >= tm) {
-            var tm:int := tmA;
-        }
-        var auxArray := new ConjuntoInt(tm);
-
-        var i:nat := 0;
-        while(i < auxArray.itens.Length - 1)
-        decreases auxArray.itens.Length - i
-        invariant 0 <= i <= auxArray.itens.Length
+        novoConjunto := new ConjuntoInt();
+        var i := 0;
+        while i < cauda 
+        invariant 0 <= i <= cauda
+        decreases cauda - i
         {
-            var resultado := b.pertence(a.itens[i]);
-            if(resultado){
-                var indice := b.BuscarIndice(a.itens[i]);
-                auxArray.itens[i] := b.itens[indice];
+            var e := itens[i];
+            var isInIntersect := outroConjunto.pertence(e);
+            if(isInIntersect) {
+                var b := novoConjunto.Adicionar(e);
             }
             i := i + 1;
         }
-        novoArray := auxArray;
-        
-        return novoArray;
-    }
+        return novoConjunto;
+    }*/
 
-    method Uniao(a: ConjuntoInt, b:ConjuntoInt) returns (novoArray:ConjuntoInt)
-    requires a.Valid()
-    requires b.Valid()
-    requires a.itens.Length > 0
-    requires b.itens.Length > 0
-    ensures novoArray.itens.Length >= 0
-    //ensures novoArray.itens[novoArray.cauda] in novoArray.Conteudo ==> novoArray.itens[novoArray.cauda] in a.Conteudo && novoArray.itens[novoArray.cauda] in b.Conteudo
+    method Uniao(outroConjunto: ConjuntoInt) returns (novoConjunto:ConjuntoInt)
+    requires outroConjunto.Valid()
+    //ensures forall i :: 0 <= i < novoConjunto.cauda ==> novoConjunto.itens[i] in Conteudo || novoConjunto.itens[i] in outroConjunto.Conteudo
+    //ensures Conteudo == old(Conteudo)
+    //ensures outroConjunto.Conteudo == old(outroConjunto.Conteudo)
+    //ensures novoConjunto.Valid()
     {
-        var auxArray := new ConjuntoInt(b.itens.Length+a.itens.Length);
-
-        auxArray := a;
-        var u:nat := a.itens.Length;
-        var i:nat := a.itens.Length;
-        var j:nat := 0;
-
-        while(i < auxArray.itens.Length - 1)
-        decreases auxArray.itens.Length - i
-        invariant 0 <= i <= auxArray.itens.Length
+        novoConjunto := new ConjuntoInt();
+        var i := 0;
+        while i < cauda
+        invariant 0 <= i <= cauda 
+        modifies novoConjunto
         {
-            var resultado := a.pertence(b.itens[j]);
-            if(!resultado){
-                auxArray.itens[u] := b.itens[j];
-                j:= j + 1;
-                u:= u + 1;
-            }
+            var adicionou := novoConjunto.Adicionar(itens[i]);
+            i := i + 1;
+        } 
+        i := 0;
+        while i < outroConjunto.cauda
+        invariant 0 <= i <= outroConjunto.cauda 
+        modifies novoConjunto
+        {
+            var adicionou := novoConjunto.Adicionar(outroConjunto.itens[i]);
             i := i + 1;
         }
-        novoArray := auxArray;
-        
-        return novoArray;
     }
 
     //method União(novoArray:seq) returns
 
-    // Retorna TRUE se removeu e FALSE se o elemento não estava no conjunto.
-    method Remover(elemento:int) returns (r:bool)
-    requires itens.Length > 0
-    requires cauda >=0
-    ensures !r ==> elemento !in old(Conteudo)
-    {
-        var elementIndex := BuscarIndice(elemento);
-        if(elementIndex == -1){
-            return false;
-        } else{
-            var novoArray := new int[itens.Length - 1];
-            var i:nat := 0;
-            while(i < elementIndex && i < itens.Length)
-            decreases itens.Length - i
-            invariant 0 <= i <= itens.Length
-            {
-                novoArray[i] := itens[i];
-                i := i + 1;
-            }
-            while(i < itens.Length - 2)
-            decreases novoArray.Length - i
-            invariant 0 <= i <= itens.Length
-            {
-                novoArray[i] := itens[i + 1];
-                i := i + 1;
-            }
-            itens := novoArray;
-            if(cauda==0){
-                cauda :=0;
-            }else{
-                cauda := cauda-1;
-            }                
-            Conteudo := itens[..cauda];
-            r:=true;
-        }
-    }    
+
 }
