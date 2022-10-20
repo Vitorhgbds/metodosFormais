@@ -3,6 +3,9 @@
 
     Implementação de uma classe de Conjunto de inteiros.
 
+    Note que alguns códigos estão comentados para evitar erros no arquivo, mas eles também foram 
+    codificados pelo grupo, faltando apenas alguns detalhes a serem resolvidos.
+
     Nomes: Eduarda Keller, Júlia Makowski, João Pedro Martins, Lucas Cardoso e Vitor Hugo
 
     
@@ -172,6 +175,7 @@ class {:autocontracts} ConjuntoInt
         return novoConjunto;
     }*/
 
+    /*
     method Uniao(outroConjunto: ConjuntoInt) returns (novoConjunto:ConjuntoInt)
     requires outroConjunto.Valid()
     requires this != outroConjunto
@@ -195,7 +199,7 @@ class {:autocontracts} ConjuntoInt
             i := i + 1;
         }
         i := 0;
-    /*    while i < outroConjunto.cauda
+        while i < outroConjunto.cauda
         modifies novoConjunto
         invariant novoConjunto.Valid()
         invariant Conteudo == old(Conteudo)
@@ -205,38 +209,48 @@ class {:autocontracts} ConjuntoInt
             var adicionou := novoConjunto.Adicionar(outroConjunto.itens[i]);
             i := i + 1;
         }
-        */
+        
     }
+    */
 
     //method União(novoArray:seq) returns
 
 
 }
-/*
-method Main{
+
+method Main(){
     var c := new ConjuntoInt();
     assert c.Conteudo == [];
+    var vazio := c.EstaVazio();
+    assert vazio;
     var p := c.pertence(0);
     assert !p;
-    var a := c.adicionar(1);
+    var a := c.Adicionar(1);
     assert a;
     assert c.Conteudo == [1];
-    var p := c.pertence(1);
-    assert p;
+    var p2 := c.pertence(1);
+    assert p2;
     // Adicionar 1 retorna false pois já temos 1.
-    var a := c.adicionar(1);
-    assert !a;
-    var a := c.adicionar(2);
-    assert a;
-    var a := c.adicionar(5);
-    assert a;
-    var a := c.adicionar(6);
-    assert a;
+    var a2 := c.Adicionar(1);
+    assert !a2;
+    var a3 := c.Adicionar(2);
+    assert a3;
+    var a4 := c.Adicionar(5);
+    assert a4;
+    var a5 := c.Adicionar(6);
+    assert a5;
     assert c.Conteudo == [1,2,5,6];
-    var index := c.BuscarIndice(5)
-    //assert index == 2
-    //var tamanho := c.Tamanho()
-    //assert tamanho == 4
-    //var vazio := c.EstaVazio()
-    //assert !vazio
-    }*/
+    var vazio2 := c.EstaVazio();
+    assert !vazio2;
+
+    // var tamanho := c.Tamanho();
+    // assert tamanho == 4;
+
+    // var r := c.Remove(6);
+    // assert r;
+    // assert c.Conteudo == [1,2,5];
+
+    
+    // var index := c.BuscarIndice(5);
+    // assert index == 2;
+}
